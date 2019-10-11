@@ -1,0 +1,158 @@
+---
+title: "p8105_hw3_ah3108"
+author: "Ava Hamilton"
+date: "10/8/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(viridis)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+```
+
+# Problem 1
+### Examining Instacart data
+
+```{r}
+
+library(p8105.datasets)
+data("instacart")
+
+#The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):
+
+instacart = 
+  instacart %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    # aisle = as.factor(aisle),
+    department = as.factor(department)
+  )
+
+
+orderinfo = 
+  instacart %>% 
+  group_by(order_id) %>% 
+  summarize(num_in_order = max(add_to_cart_order, na.rm = TRUE),
+            num_reorders = sum(reordered, na.rm = TRUE),
+            ratio_reorder = num_reorders/num_in_order) %>% 
+  ungroup() %>% 
+  view()
+
+
+```
+
+The *instacart* data has `r ncol(instacart)` variables and `r nrow(instacart)` observations, where each observation is a product ordered on the online grocery service, Instacart. The data contains `r nrow(distinct(instacart, order_id))` orders from `r nrow(distinct(instacart, user_id))` shoppers. The median number of items ordered was `r median(pull(orderinfo, num_in_order))`, and ranged from `r min(pull(orderinfo, num_in_order))` to `r max(pull(orderinfo, num_in_order))` items with an average `r  round(100*(mean(pull(orderinfo, ratio_reorder))), 2)`% reordered items.
+
+```{r}
+# Part A - How many aisles are there, and which aisles are the most items ordered from?
+
+items = 
+  instacart %>% 
+  add_count(aisle, sort = TRUE, name = "items_from_aisle")  %>% 
+  distinct(aisle, items_from_aisle) %>% 
+  arrange(desc(items_from_aisle))
+
+```
+
+There are `r nrow(distinct(instacart, aisle))` aisles, with the maximum number of items ordered from the `r items %>% slice(1) %>%   magrittr::extract2("aisle")` aisle (N = `r max(pull(items,items_from_aisle)) `) followed by `r items %>% slice(2) %>%   magrittr::extract2("aisle")`, `r items %>% slice(3) %>%   magrittr::extract2("aisle")`, `r items %>% slice(4) %>%   magrittr::extract2("aisle")`, and `r items %>% slice(5) %>%   magrittr::extract2("aisle")`.
+
+
+```{r}
+# Part B - plot of number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
+
+items %>% 
+  filter(items_from_aisle > 10000) %>%
+  ggplot(aes(x = reorder(aisle, -items_from_aisle), y = items_from_aisle)) +
+  geom_point() +
+  scale_y_continuous(breaks = seq(10000, 150000, 10000)) + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Number of items ordered from each aisle",
+       x = "Aisle",
+       y = "Number of Items Ordered")
+
+```
+
+
+# AVA COMMENT
+
+```{r}
+# Part C 
+#Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+top_products = instacart %>% 
+  filter(aisle %in% c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  add_count(product_name, sort = TRUE, name = "items_in_aisle")  %>% 
+  distinct(aisle, product_name, items_in_aisle) %>% 
+  group_by(aisle) %>% 
+  mutate(
+    rank_product = rank(-items_in_aisle)
+  ) %>% 
+  filter(rank_product <= 3) %>% 
+  dplyr::select(rank_product, everything()) %>% 
+  kableExtra::kable()
+
+top_products
+
+# product_table = pivot_wider(top_products,
+#                            names_from = aisle,
+#                            values_from = c(product_name, items_in_aisle)
+#) %>% 
+#  kableExtra::kable() 
+
+```
+
+# AVA COMMENT
+
+
+```{r}
+# Part D:
+#Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
+
+```
+
+
+# AVA COMMENT
+
+
+# Problem 2
+### Examining BRFSS data
+
+```{r}
+
+data("BRFSS")  
+
+brfss_smart2010 = 
+brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  filter(topic == "Overall Health" & response != "Very Poor") %>% 
+  mutate(question = as.factor(question),
+         response = as.factor(response),
+         question = as.factor(question),
+         )
+
+
+
+```
+
+
+
+
+
