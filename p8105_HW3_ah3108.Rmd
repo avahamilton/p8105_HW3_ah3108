@@ -14,10 +14,7 @@ library(p8105.datasets)
 
 knitr::opts_chunk$set(
   echo = TRUE,
-  warning = FALSE,
-  fig.width = 8, 
-  fig.height = 6,
-  out.width = "90%"
+  warning = FALSE
 )
 options(
   ggplot2.continuous.colour = "rainbow",
@@ -184,7 +181,7 @@ loca_df =
 
 
 #Part B
-  brfss %>% 
+brfss %>% 
   filter(health_rating == "Excellent") %>% 
   group_by(state, year) %>% 
   mutate(
@@ -193,7 +190,7 @@ loca_df =
   distinct(state, year, data_avg) %>%
   ggplot(aes(x = year, y = data_avg, color = state)) +
   geom_line(aes(group = state)) +
-    labs(title = "Average excellent rating across time, by state",
+  labs(title = "Average excellent rating across time, by state",
        x = "Year",
        y = "Across state average percent excellent rating")
 
@@ -225,7 +222,7 @@ loca_df =
 # Part A - wrangle data
 accel_df = read_csv("./accel_data.csv") %>% 
   janitor::clean_names() %>% 
-    rename(day_of_week = day) %>% 
+  rename(day_of_week = day) %>% 
   mutate(
     day_of_week = as.factor(day_of_week),
     day_of_week = ordered(day_of_week, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
@@ -241,44 +238,54 @@ accel_df = read_csv("./accel_data.csv") %>%
 
 ```
 
-
+#AVA COMMENT
 
 ```{r}
 # Part B - aggregate across activity
 
 accel_df %>% 
-    mutate(
-      act_sum = select(., activity_1:activity_1440) 
-      %>% apply(1, sum, na.rm = TRUE),
-      ) %>% 
+  mutate(
+    act_sum = select(., activity_1:activity_1440) 
+    %>% apply(1, sum, na.rm = TRUE),
+  ) %>% 
   select(act_sum, week, day_of_week) %>% 
   pivot_wider(
     names_from = day_of_week,
     values_from = act_sum
   ) %>% 
   kableExtra::kable(format.args = list(big.mark = ","), digits = 0) 
-  
+
 
 
 ```
-
+# AVA COMMENT
 
 ```{r}
 # Part C - figure across day
 
-accel_df %>% 
+long_accel = accel_df %>% 
   pivot_longer(
     cols = activity_1:activity_1440,
     names_to = "min_of_day",
-   names_prefix = "activity_",
+    names_prefix = "activity_",
     values_to = "activity_per_min"
   ) %>% 
-  filter(week == 1) %>% 
-  ggplot(aes(x = min_of_day, y = activity_per_min, color = day_of_week)) +
-  geom_line(aes(group = day_id))
+  mutate(
+    min_of_day = as.integer(min_of_day)
+  )
 
+
+long_accel %>% 
+  #filter(week == 1) %>% 
+  ggplot(aes(x = min_of_day, y = activity_per_min, color = day_of_week)) +
+  geom_line(aes(group = day_id), alpha = 0.7) +
+  scale_x_continuous(breaks = seq(0, 1400, 200)) +
+  scale_color_hue("Day of the week")  +
+  labs(title = "Daily Accelerometer Activity Over 5 Weeks for 63 Year-old Male",
+       x = "Minute of the Day",
+       y = "Accelerometer Activity Level")
 
 ```
 
 
-
+Based on the figure above, in general, there is higher latenight activity on Fridays, some late afternoon activity on saturdays, and higher daytime activity on Sundays. There also seems to be some early morning activity Sunday mornings, which would most likely mean continuation of activity from Saturday night.
