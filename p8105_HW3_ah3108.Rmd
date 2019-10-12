@@ -9,7 +9,8 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
-library(viridis)
+#library(viridis)
+library(p8105.datasets)
 
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -19,12 +20,13 @@ knitr::opts_chunk$set(
   out.width = "90%"
 )
 options(
-  ggplot2.continuous.colour = "viridis",
-  ggplot2.continuous.fill = "viridis"
+  ggplot2.continuous.colour = "rainbow",
+  ggplot2.continuous.fill = "rainbow"
 )
-scale_colour_discrete = scale_colour_viridis_d
-scale_fill_discrete = scale_fill_viridis_d
+scale_colour_discrete = scale_color_hue()
+scale_fill_discrete = scale_fill_hue()
 theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
 
 ```
 
@@ -33,7 +35,6 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ```{r}
 
-library(p8105.datasets)
 data("instacart")
 
 #The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):
@@ -139,20 +140,145 @@ top_products
 
 data("BRFSS")  
 
-brfss_smart2010 = 
-brfss_smart2010 %>% 
+brfss = 
+  brfss_smart2010 %>% 
   janitor::clean_names() %>% 
-  filter(topic == "Overall Health" & response != "Very Poor") %>% 
+  filter(topic == "Overall Health") %>% 
   mutate(question = as.factor(question),
          response = as.factor(response),
-         question = as.factor(question),
-         )
+         response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"), ordered = T),
+         question = as.factor(question)
+  ) %>% 
+  rename(
+    health_rating = response,
+    percent = data_value,
+    state = locationabbr,
+    county = locationdesc,
+  ) %>% 
+  dplyr::select(-c("question", "topic", "class", "topic_id", "location_id", "question_id", "class_id", "data_source", "data_value_type", "data_value_unit", "data_value_footnote", "data_value_footnote_symbol"))
+
+
+# In 2002, which states were observed at 7 or more locations? What about in 2010?
+
+
+# Part A
+loca_df = 
+  brfss %>% 
+  distinct(state, county, year) %>% 
+  arrange(year, state, county) %>% 
+  group_by(state, year) %>% 
+  add_count(state, name = "num_locations") %>% 
+  distinct(year, state, num_locations) %>% 
+  filter(num_locations >= 7)
+
+
+
+```
+
+# AVA write inline comments for part A using data above
+
+
+```{r}
+
+# Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state (that is, make a plot showing a line for each state across years – the geom_line geometry and group aesthetic will help).
+
+
+#Part B
+  brfss %>% 
+  filter(health_rating == "Excellent") %>% 
+  group_by(state, year) %>% 
+  mutate(
+    data_avg = mean(percent, na.rm = TRUE)
+  ) %>% 
+  distinct(state, year, data_avg) %>%
+  ggplot(aes(x = year, y = data_avg, color = state)) +
+  geom_line(aes(group = state)) +
+    labs(title = "Average excellent rating across time, by state",
+       x = "Year",
+       y = "Across state average percent excellent rating")
+
+```
+
+
+
+
+```{r}
+
+#Part C
+
+# Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
+
 
 
 
 ```
 
 
+
+
+
+# Problem 3
+
+```{r message = FALSE}
+# read in data
+
+# Part A - wrangle data
+accel_df = read_csv("./accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+    rename(day_of_week = day) %>% 
+  mutate(
+    day_of_week = as.factor(day_of_week),
+    day_of_week = ordered(day_of_week, levels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")),
+    weekend = ifelse(day_of_week %in% c("Saturday", "Sunday"), "weekend", "weekday"),
+    weekend = as.factor(weekend)
+  ) %>% 
+  arrange(week, day_of_week) %>% 
+  mutate(
+    order_id = sequence(n())
+  ) %>% 
+  select(order_id, day_id, week, day_of_week, weekend, everything())
+
+
+```
+
+
+
+```{r}
+# Part B - aggregate across activity
+
+accel_df %>% 
+    mutate(
+      act_sum = select(., activity_1:activity_1440) 
+      %>% apply(1, sum, na.rm = TRUE),
+      ) %>% 
+  select(act_sum, week, day_of_week) %>% 
+  pivot_wider(
+    names_from = day_of_week,
+    values_from = act_sum
+  ) %>% 
+  kableExtra::kable(format.args = list(big.mark = ","), digits = 0) 
+  
+
+
+```
+
+
+```{r}
+# Part C - figure across day
+
+accel_df %>% 
+  pivot_longer(
+    cols = activity_1:activity_1440,
+    names_to = "min_of_day",
+   names_prefix = "activity_",
+    values_to = "activity_per_min"
+  ) %>% 
+  filter(week == 1) %>% 
+  ggplot(aes(x = min_of_day, y = activity_per_min, color = day_of_week)) +
+  geom_line(aes(group = day_id))
+
+
+```
 
 
 
